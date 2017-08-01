@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-3.0.xsd
+http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<context:annotation-config/>
+	<!-- Substitute ${placeholders} with externalized application properties -->
+	<context:property-placeholder location="classpath:jdbc.properties,classpath:properties/redis.properties,classpath:properties/system.properties" />
+	
+	<context:component-scan base-package="com.weixin">
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+
+	<!-- ===========================数据源========================== -->
+	<!-- 数据源父类：提供连接池配置 -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"  init-method="init" destroy-method="close">
+		<property name="driverClassName" value="${db.driverclass}" />  
+        <property name="url" value="${db.url}" />  
+        <property name="username" value="${db.username}" />  
+        <property name="password" value="${db.password}" /> 	
+		<!-- 配置初始化大小、最小、最大 -->
+		<property name="initialSize" value="${db.initialSize}" />
+		<property name="minIdle" value="${db.maxIdle}" />
+		<property name="maxActive" value="${db.maxActive}" />
+		<!-- 配置获取连接等待超时的时间 -->
+		<property name="maxWait" value="${db.maxWait}" />
+		<!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+		<property name="validationQuery" value="${db.validationQuery}" />
+		<property name="testWhileIdle" value="true" />
+		<property name="testOnBorrow" value="true" />
+		<property name="testOnReturn" value="false" />
+		<!-- 打开PSCache，并且指定每个连接上PSCache的大小 <property name="poolPreparedStatements" 
+			value="true" /> <property name="maxPoolPreparedStatementPerConnectionSize" 
+			value="20" /> -->
+		<!-- 配置监控统计拦截的filters -->
+		<property name="filters" value="stat" />
+		<!-- 是否合并多个druidDataSource的统计数据<property name="useGloalDataSourceStat" value="true" />  -->
+	</bean>
+	
+	<!-- <bean id="redisCache" class="com.commons.redis.RedisDcAdapter" init-method="initPool">
+		<property name="redisServerIp" value="${dc_redis.serverIp}" />
+		<property name="redisServerPort" value="${dc_redis.serverPort}" />
+		<property name="pwd" value="${dc_redis.pwd}" />
+		<property name="dbIndex" value="${dc_redis.dbIndex}" />
+		<property name="maxTotal" value="${dc_redis.maxTotal}" />
+		<property name="maxIdle" value="${dc_redis.maxIdle}" />
+		<property name="maxWaitMillis" value="${dc_redis.maxWaitMillis}"></property>
+		<property name="testOnBorrow" value="true"></property>
+		<property name="flag" value="${dc_redis.flag}"/>
+		
+		<property name="sentinels" value="${dc_redis.sentinels}"></property>
+		<property name="poolType" value="${dc_redis.poolType}"></property>
+		<property name="masterName" value="${dc_redis.masterName}"></property>
+	</bean> -->
+
+	<!-- Mybatis配置 -->
+	<!--
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="configLocation" value="classpath:MyBatis-Configuration.xml" />
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	 -->
+	
+	<bean id="sqlSessionFactory" class="com.commons.util.SqlSessionFactoryBeanExtend">
+		<property name="configLocation" value="classpath:MyBatis-Configuration.xml" />
+		<constructor-arg name="dataSource" ref="dataSource" />
+		<constructor-arg name="mapperLocationsMap">
+			<map>
+				<entry key="oracle" value="classpath:mapper/oracle/*.xml" />
+				<entry key="mysql" value="classpath:mapper/mysql/*.xml" />
+				<entry key="sqlserver" value="classpath:mapper/sqlserver/*.xml" />
+			</map>
+		</constructor-arg>
+	</bean>
+
+	<bean id="mapperScanner" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+		<property name="basePackage" value="com.weixin.**.mapper,com.weixin.**.**.mapper"></property>
+	</bean>
+	
+	<!-- 事务管理 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	<bean id="transactionInterceptor"
+		class="org.springframework.transaction.interceptor.TransactionInterceptor">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="transactionAttributes">
+			<props>
+				<prop key="insert*">PROPAGATION_REQUIRES_NEW,ISOLATION_DEFAULT,-java.lang.Exception</prop>
+				<prop key="create*">PROPAGATION_REQUIRES_NEW,ISOLATION_DEFAULT,-java.lang.Exception</prop>
+				<prop key="Create*">PROPAGATION_REQUIRES_NEW,ISOLATION_DEFAULT,-java.lang.Exception</prop>
+				<prop key="update*">PROPAGATION_REQUIRES_NEW,ISOLATION_DEFAULT,-java.lang.Exception</prop>
+				<prop key="save*">PROPAGATION_REQUIRES_NEW,ISOLATION_DEFAULT,-java.lang.Exception</prop>
+				<prop key="delete*">PROPAGATION_REQUIRES_NEW,ISOLATION_DEFAULT,-java.lang.Exception</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<bean class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+		<property name="beanNames">
+			<list>
+				<value>*Service</value>
+				<value>*ServiceImpl</value>
+			</list>
+		</property>
+		<property name="interceptorNames">
+			<list>
+				<value>transactionInterceptor</value>
+			</list>
+		</property>
+	</bean>
+	<!--  文件上传  --> 
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">  
+	    <property name="maxUploadSize" value="10485760"/>
+	</bean>
+</beans>

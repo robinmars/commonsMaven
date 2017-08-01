@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:util="http://www.springframework.org/schema/util" xmlns:aop="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/mvc
+		http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.0.xsd
+		http://www.springframework.org/schema/util   
+		http://www.springframework.org/schema/util/spring-util-3.0.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+	
+	<!-- Configures the @Controller programming model -->
+	<!-- JSR-303 support will be detected on classpath and enabled automatically -->
+	<mvc:annotation-driven/>
+	
+	<!-- Scans the classpath of this application for @Components to deploy as beans -->
+	<!-- 如果此处扫描service会导致spring事务失效 -->
+	<context:component-scan base-package="com.weixin">
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service" />
+	</context:component-scan>
+
+	<!-- Resolves view names to protected .jsp resources within the /WEB-INF/views directory -->
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass" value="org.springframework.web.servlet.view.JstlView" />
+		<property name="prefix" value="/WEB-INF/jsp/"/>
+		<property name="suffix" value=".jsp"/>
+	</bean>
+	
+<!-- 	<bean id="handlerExceptionResoler" class="org.springframework.web.servlet.handler.SimpleMappingExceptionResoler">
+		<property name="exceptionMappings">
+			<props>
+				<prop key="smartcrud.common.exception.AuthorizationException">redirect:/login</prop>
+			</props>
+		</property>
+	</bean> -->
+	
+	<mvc:resources mapping="/inc/**" location="/inc/" />
+
+	<!--开启aop，对类代理 -->
+	<aop:config proxy-target-class="true"></aop:config>
+
+	<!--开启shiro注解支持，在controller的注解 -->
+	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="securityManager" ref="securityManager"/>
+	</bean>
+	
+	
+</beans>  
